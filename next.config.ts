@@ -24,6 +24,18 @@ const nextConfig = {
         net: false,
         tls: false,
       };
+
+      // Ensure proper module resolution for Cesium
+      config.module.rules.push({
+        test: /\.wasm$/,
+        type: 'webassembly/async',
+      });
+
+      // Handle worker files
+      config.module.rules.push({
+        test: /\.worker\.js$/,
+        use: { loader: 'worker-loader' },
+      });
     }
 
     return config;

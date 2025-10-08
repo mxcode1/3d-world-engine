@@ -6,13 +6,23 @@ import { Ion } from 'cesium';
 export function initializeCesium(): void {
   if (typeof window === 'undefined') return;
 
-  // Set up Cesium Ion token
+  // Set up Cesium Ion token with detailed logging
   const token = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN;
+  console.log('🔑 Cesium token check:', { 
+    hasToken: !!token, 
+    tokenLength: token?.length || 0,
+    tokenStart: token ? token.substring(0, 8) + '...' : 'none'
+  });
+
   if (token) {
-    Ion.defaultAccessToken = token;
-    console.log('Cesium Ion token configured successfully');
+    try {
+      Ion.defaultAccessToken = token;
+      console.log('✅ Cesium Ion token configured successfully');
+    } catch (error) {
+      console.error('❌ Error setting Cesium Ion token:', error);
+    }
   } else {
-    console.warn('Cesium Ion token not found. Some features may not work correctly.');
+    console.warn('⚠️ Cesium Ion token not found. Some features may not work correctly.');
   }
 
   // Choose asset source based on environment
