@@ -4,13 +4,18 @@
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+// Only validate in browser environment, not during build
+if (typeof window !== 'undefined' && (!SUPABASE_URL || !SUPABASE_ANON_KEY)) {
   throw new Error('Missing Supabase environment variables');
 }
 
 // Simple REST client for Supabase
 export async function supabaseQuery(table: string, params: Record<string, unknown> = {}) {
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
+  // Use fallback values during build time
+  const baseUrl = SUPABASE_URL || 'https://placeholder.supabase.co';
+  const apiKey = SUPABASE_ANON_KEY || 'placeholder-key';
+  
+  const url = new URL(`${baseUrl}/rest/v1/${table}`);
   
   // Add query parameters
   Object.entries(params).forEach(([key, value]) => {
@@ -21,8 +26,8 @@ export async function supabaseQuery(table: string, params: Record<string, unknow
 
   const response = await fetch(url.toString(), {
     headers: {
-      'apikey': SUPABASE_ANON_KEY as string,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'apikey': apiKey,
+      'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
   });

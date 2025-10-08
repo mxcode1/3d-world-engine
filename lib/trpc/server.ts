@@ -23,8 +23,19 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Create context for each request
 export async function createContext(opts?: FetchCreateContextFnOptions) {
-  // Get user from Supabase Auth
-  const { data: { user } } = await supabase.auth.getUser();
+  // Get user from Supabase Auth (skip during build time)
+  let user = null;
+  
+  try {
+    // Only attempt auth in runtime environment
+    if (typeof window !== 'undefined' || (opts && opts.req)) {
+      const { data } = await supabase.auth.getUser();
+      user = data.user;
+    }
+  } catch {
+    // Silently handle auth errors during build
+    console.warn('Auth check failed during build, continuing without user context');
+  }
 
   return {
     prisma,

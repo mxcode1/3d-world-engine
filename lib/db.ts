@@ -3,8 +3,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Get environment variables with fallbacks for build time
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key';
+
+// Validate environment variables only at runtime, not build time
+if (typeof window !== 'undefined' && (supabaseUrl === 'https://placeholder.supabase.co' || supabaseKey === 'placeholder-service-key')) {
+  console.error('Missing Supabase environment variables in production');
+}
 
 // Create Supabase client with service role key for server-side operations
 export const supabase = createClient(supabaseUrl, supabaseKey, {
