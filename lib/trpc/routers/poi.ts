@@ -17,8 +17,15 @@ export const poiRouter = router({
       offset: z.number().min(0).default(0),
     }))
     .query(async ({ ctx, input }) => {
+      // Use Supabase fallback in production for now
+      if (process.env.NODE_ENV === 'production') {
+        console.log('Using Supabase fallback in production');
+        const fallbackPois = await supabaseFallback.getPOIs(input.region);
+        return fallbackPois;
+      }
+      
       try {
-        // Try Prisma first
+        // Try Prisma first in development
         const pois = await ctx.prisma.pOI.findMany({
           where: {
             ...(input.region && { region: input.region }),
@@ -72,7 +79,14 @@ export const poiRouter = router({
       categories: z.array(z.string()).optional(),
     }))
     .query(async ({ ctx, input }) => {
-      const pois = await ctx.prisma.pOI.findMany({
+      // Use Supabase fallback in production for now
+      if (process.env.NODE_ENV === 'production') {
+        console.log('Using Supabase fallback for getInBounds in production');
+        return await supabaseFallback.getPOIs(input.region);
+      }
+      
+      try {
+        const pois = await ctx.prisma.pOI.findMany({
         where: {
           latitude: {
             gte: input.south,
@@ -102,14 +116,29 @@ export const poiRouter = router({
       });
 
       return pois;
+      } catch (error) {
+        // Fallback to Supabase REST API
+        console.warn('Prisma connection failed, using Supabase fallback:', error);
+        return await supabaseFallback.getPOIs(input.region);
+      }
     }),
 
   // Get single POI by ID
   getById: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      // Use Supabase fallback in production for now
+      if (process.env.NODE_ENV === 'production') {
+        console.log('Using Supabase fallback for getById in production');
+        const fallbackPoi = await supabaseFallback.getPOIById(input.id);
+        if (!fallbackPoi) {
+          throw new Error('POI not found');
+        }
+        return fallbackPoi;
+      }
+      
       try {
-        // Try Prisma first
+        // Try Prisma first in development
         const poi = await ctx.prisma.pOI.findUnique({
           where: { id: input.id },
           include: {
