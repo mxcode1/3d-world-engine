@@ -16,34 +16,59 @@ export function initializeCesium(): void {
   }
 
   // Choose asset source based on environment
-  const useLocalAssets = process.env.NODE_ENV === 'development' || 
-                        process.env.NEXT_PUBLIC_USE_LOCAL_CESIUM_ASSETS === 'true';
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const forceLocalAssets = process.env.NEXT_PUBLIC_USE_LOCAL_CESIUM_ASSETS === 'true';
+  const useLocalAssets = isDevelopment || forceLocalAssets;
+
+  console.log('Environment check:', { 
+    NODE_ENV: process.env.NODE_ENV, 
+    NEXT_PUBLIC_USE_LOCAL_CESIUM_ASSETS: process.env.NEXT_PUBLIC_USE_LOCAL_CESIUM_ASSETS,
+    useLocalAssets 
+  });
 
   if (useLocalAssets) {
-    // Use local assets (current setup)
+    // Use local assets
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).CESIUM_BASE_URL = '/cesium/';
-    console.log('Using local Cesium assets');
+    console.log('✓ Using local Cesium assets from /cesium/');
   } else {
-    // Use Cesium CDN (recommended for production)
+    // Use local assets in production too for now (more reliable)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).CESIUM_BASE_URL = 'https://cesium.com/downloads/cesiumjs/releases/1.134.0/Build/Cesium/';
-    console.log('Using Cesium CDN assets');
+    (window as any).CESIUM_BASE_URL = '/cesium/';
+    console.log('✓ Using local Cesium assets in production (fallback)');
   }
 
   // Set up additional Cesium configuration
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cesium = (window as any).Cesium;
-    if (cesium && cesium.buildModuleUrl) {
-      cesium.buildModuleUrl.setBaseUrl(
-        useLocalAssets 
-          ? '/cesium/' 
-          : 'https://cesium.com/downloads/cesiumjs/releases/1.134.0/Build/Cesium/'
-      );
-    }
+    // Wait for Cesium to be available
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    const configureCesiumModule = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cesium = (window as any).Cesium;
+      if (cesium && cesium.buildModuleUrl) {
+        cesium.buildModuleUrl.setBaseUrl('/cesium/');
+        console.log('✓ Cesium buildModuleUrl configured successfully');
+        return true;
+      }
+      return false;
+    };
+
+    const attemptConfiguration = () => {
+      if (configureCesiumModule()) return;
+      
+      attempts++;
+      if (attempts < maxAttempts) {
+        setTimeout(attemptConfiguration, 100);
+      } else {
+        console.warn('⚠️ Could not configure Cesium buildModuleUrl after', maxAttempts, 'attempts');
+      }
+    };
+
+    attemptConfiguration();
   } catch (error) {
-    console.warn('Could not configure Cesium buildModuleUrl:', error);
+    console.warn('❌ Error configuring Cesium buildModuleUrl:', error);
   }
 
   console.log('Cesium configuration initialized');

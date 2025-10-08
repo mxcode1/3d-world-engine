@@ -101,30 +101,55 @@ export function CesiumViewer() {
   // Add error handling state
   const [isLoading, setIsLoading] = React.useState(true);
   const [assetsValidated, setAssetsValidated] = React.useState(false);
+  const [cesiumError, setCesiumError] = React.useState<string | null>(null);
 
   // Handle Cesium initialization and asset validation
   useEffect(() => {
     let mounted = true;
 
     const initializeAndValidate = async () => {
-      // Validate assets first
-      const assetsOk = await validateCesiumAssets();
-      if (mounted) {
-        setAssetsValidated(assetsOk);
-      }
-
-      // Give Cesium time to load
-      setTimeout(() => {
+      try {
+        console.log('🚀 Starting Cesium initialization...');
+        
+        // Validate assets first
+        const assetsOk = await validateCesiumAssets();
+        console.log('📦 Assets validation:', assetsOk ? 'SUCCESS' : 'FAILED');
+        
         if (mounted) {
+          setAssetsValidated(assetsOk);
+        }
+
+        // Give Cesium time to load
+        setTimeout(() => {
+          if (mounted) {
+            console.log('✅ Cesium initialization completed');
+            setIsLoading(false);
+          }
+        }, 2000);
+      } catch (error) {
+        console.error('❌ Cesium initialization error:', error);
+        if (mounted) {
+          setCesiumError(error instanceof Error ? error.message : 'Unknown error');
           setIsLoading(false);
         }
-      }, 2000);
+      }
     };
 
+    // Add global error handler for Cesium
+    const handleGlobalError = (event: ErrorEvent) => {
+      if (event.message && event.message.includes('cesium')) {
+        console.error('🔴 Cesium runtime error:', event.error || event.message);
+        setCesiumError(event.message);
+      }
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    
     initializeAndValidate();
 
     return () => {
       mounted = false;
+      window.removeEventListener('error', handleGlobalError);
     };
   }, []);
 
@@ -132,7 +157,7 @@ export function CesiumViewer() {
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
-      {isLoading && (
+      {(isLoading || cesiumError) && (
         <div style={{
           position: 'absolute',
           top: 0,
@@ -146,23 +171,53 @@ export function CesiumViewer() {
           color: 'white',
           zIndex: 1000,
           flexDirection: 'column',
-          gap: '1rem'
+          gap: '1rem',
+          padding: '2rem',
+          textAlign: 'center'
         }}>
           <h2>🌍 3D World Engine</h2>
-          <p>Loading Cesium globe...</p>
-          {!assetsValidated && (
-            <p style={{ color: '#fbbf24', fontSize: '14px' }}>
-              ⚠️ Some assets may not be available
-            </p>
+          
+          {cesiumError ? (
+            <>
+              <p style={{ color: '#ef4444', fontSize: '18px' }}>❌ Cesium Error</p>
+              <p style={{ color: '#fbbf24', fontSize: '14px', maxWidth: '600px' }}>
+                {cesiumError}
+              </p>
+              <p style={{ fontSize: '12px', opacity: 0.7 }}>
+                Environment: {process.env.NODE_ENV || 'unknown'}
+              </p>
+              <button 
+                onClick={() => window.location.reload()}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Reload Page
+              </button>
+            </>
+          ) : (
+            <>
+              <p>Loading Cesium globe...</p>
+              {!assetsValidated && (
+                <p style={{ color: '#fbbf24', fontSize: '14px' }}>
+                  ⚠️ Some assets may not be available
+                </p>
+              )}
+              <div style={{ 
+                width: '40px', 
+                height: '40px', 
+                border: '4px solid #333',
+                borderTop: '4px solid #fff',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }}></div>
+            </>
           )}
-          <div style={{ 
-            width: '40px', 
-            height: '40px', 
-            border: '4px solid #333',
-            borderTop: '4px solid #fff',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }}></div>
         </div>
       )}
       <Viewer
