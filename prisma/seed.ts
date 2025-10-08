@@ -8,68 +8,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting seed...');
 
-  // Create regions
-  console.log('📍 Creating regions...');
-  
-  const lisbon = await prisma.region.upsert({
-    where: { id: 'lisbon' },
-    update: {},
-    create: {
-      id: 'lisbon',
-      name: 'Lisbon Metropolitan Area',
-      bounds: {
-        north: 38.8,
-        south: 38.65,
-        east: -9.05,
-        west: -9.25,
-      },
-      center: {
-        lat: 38.7223,
-        lon: -9.1393,
-        altitude: 50000,
-      },
-      zoom_level: 12,
-      tile_providers: {
-        terrain: 'cesium-world-terrain',
-        imagery: 'cesium-osm-buildings',
-      },
-      featured_pois: [],
-      description: 'Lisbon, Portugal - vibrant capital city with thriving digital nomad community',
-      population: 2800000,
-      timezone: 'Europe/Lisbon',
-    },
-  });
-
-  const andalusia = await prisma.region.upsert({
-    where: { id: 'andalusia' },
-    update: {},
-    create: {
-      id: 'andalusia',
-      name: 'Andalusia Region',
-      bounds: {
-        north: 38.7,
-        south: 36.0,
-        east: -1.6,
-        west: -7.5,
-      },
-      center: {
-        lat: 37.3891,
-        lon: -5.9845,
-        altitude: 150000,
-      },
-      zoom_level: 8,
-      tile_providers: {
-        terrain: 'cesium-world-terrain',
-        imagery: 'cesium-osm-buildings',
-      },
-      featured_pois: [],
-      description: 'Andalusia, Spain - sun-soaked region with beaches, culture, and great connectivity',
-      population: 8500000,
-      timezone: 'Europe/Madrid',
-    },
-  });
-
-  console.log('✅ Regions created');
+  console.log('📍 Seeding data for regions: lisbon, andalusia...');
 
   // Create a demo user for seed POIs
   const seedUser = await prisma.user.upsert({
@@ -145,17 +84,26 @@ async function main() {
 
   // Insert all POIs
   for (const poi of [...lisbonPOIs, ...andalusiaPOIs]) {
-    await prisma.pOI.upsert({
-      where: { 
-        // Use a compound key approach or generate a unique identifier
-        id: `${poi.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${poi.region}`,
-      },
-      update: {},
-      create: {
-        ...poi,
-        created_by: seedUser.id,
+    // Check if POI already exists by name and location
+    const existing = await prisma.pOI.findFirst({
+      where: {
+        name: poi.name,
+        latitude: poi.latitude,
+        longitude: poi.longitude,
       },
     });
+
+    if (!existing) {
+      await prisma.pOI.create({
+        data: {
+          ...poi,
+          created_by: seedUser.id,
+        },
+      });
+      console.log(`✓ Created POI: ${poi.name}`);
+    } else {
+      console.log(`→ POI already exists: ${poi.name}`);
+    }
   }
 
   console.log('✅ POIs created');
