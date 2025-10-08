@@ -1,12 +1,4 @@
 {
-  "version": 2,
-  "name": "3d-world-engine",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
   "functions": {
     "app/api/trpc/[trpc]/route.ts": {
       "maxDuration": 30
