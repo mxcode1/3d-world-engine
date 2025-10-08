@@ -43,9 +43,6 @@ const nextConfig = {
       allowedOrigins: ["localhost:3000", "*.vercel.app"],
     },
   },
-
-  // Output standalone for better Vercel deployment
-  output: 'standalone',
 };
 
 export default nextConfig;
